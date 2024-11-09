@@ -1,0 +1,156 @@
+openapi: 3.0.3
+info:
+  title: Blockchain API
+  description: A simple API for interacting with a blockchain
+  version: "1.0.0"
+paths:
+  /transactions/new:
+    post:
+      summary: Create a new transaction
+      description: Adds a new transaction that will be added to the next block.
+      requestBody:
+        description: Transaction details
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sender:
+                  type: string
+                  description: The sender's address
+                  example: "address_1"
+                recipient:
+                  type: string
+                  description: The recipient's address
+                  example: "address_2"
+                amount:
+                  type: integer
+                  description: The amount of currency transferred
+                  example: 100
+              required:
+                - sender
+                - recipient
+                - amount
+      responses:
+        "201":
+          description: Transaction created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Transaction will be added to Block 2"
+                  block_index:
+                    type: integer
+                    description: Index of the block where the transaction will be added
+                    example: 2
+        "400":
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid transaction data"
+
+  /mine:
+    get:
+      summary: Mine a new block
+      description: Mines a new block on the blockchain, adding any pending transactions.
+      responses:
+        "200":
+          description: New block mined
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "New Block Forged"
+                  block:
+                    type: object
+                    description: Details of the mined block
+                    properties:
+                      index:
+                        type: integer
+                        example: 1
+                      timestamp:
+                        type: string
+                        format: date-time
+                        example: "2024-01-01T12:00:00Z"
+                      transactions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            sender:
+                              type: string
+                              example: "address_1"
+                            recipient:
+                              type: string
+                              example: "address_2"
+                            amount:
+                              type: integer
+                              example: 100
+                      previous_hash:
+                        type: string
+                        example: "abcd1234"
+                      hash:
+                        type: string
+                        example: "efgh5678"
+
+  /chain:
+    get:
+      summary: Get the full blockchain
+      description: Returns the entire blockchain.
+      responses:
+        "200":
+          description: The complete blockchain
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  chain:
+                    type: array
+                    description: List of all blocks in the blockchain
+                    items:
+                      type: object
+                      properties:
+                        index:
+                          type: integer
+                          example: 1
+                        timestamp:
+                          type: string
+                          format: date-time
+                          example: "2024-01-01T12:00:00Z"
+                        transactions:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              sender:
+                                type: string
+                                example: "address_1"
+                              recipient:
+                                type: string
+                                example: "address_2"
+                              amount:
+                                type: integer
+                                example: 100
+                        previous_hash:
+                          type: string
+                          example: "abcd1234"
+                        hash:
+                          type: string
+                          example: "efgh5678"
+                  length:
+                    type: integer
+                    description: The total number of blocks in the blockchain
+                    example: 3
