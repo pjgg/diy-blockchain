@@ -23,6 +23,8 @@ type (
 		NewTransaction() func(http.ResponseWriter, *http.Request)
 		MineBlock() func(http.ResponseWriter, *http.Request)
 		GetChain() func(http.ResponseWriter, *http.Request)
+		RegisterNodes() func(http.ResponseWriter, *http.Request)
+		ResolveConflicts() func(http.ResponseWriter, *http.Request)
 	}
 )
 
@@ -94,6 +96,61 @@ func (nt *BlockAndChainHandler) GetChain() func(http.ResponseWriter, *http.Reque
 			"chain":  bc.Chain,
 			"length": len(bc.Chain),
 		}
+		RespondWithJSON(w, http.StatusOK, response)
+	}
+}
+
+func (nt *BlockAndChainHandler) RegisterNodes() func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var payload struct {
+			Nodes []string `json:"nodes"`
+		}
+
+		err := json.NewDecoder(r.Body).Decode(&payload)
+		if err != nil || len(payload.Nodes) == 0 {
+			http.Error(w, "Invalid request payload. Please supply a valid list of nodes.", http.StatusBadRequest)
+			return
+		}
+
+		for _, node := range payload.Nodes {
+			bc.RegisterNode(node)
+		}
+
+		response := map[string]interface{}{
+			"message":     "New nodes have been added",
+			"total_nodes": bc.Nodes,
+		}
+		RespondWithJSON(w, http.StatusCreated, response)
+	}
+}
+
+func (nt *BlockAndChainHandler) ResolveConflicts() func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		replaced := bc.ResolveConflicts()
+
+		var response map[string]interface{}
+		if replaced {
+			response = map[string]interface{}{
+				"message":   "Our chain was replaced",
+				"new_chain": bc.Chain,
+			}
+		} else {
+			response = map[string]interface{}{
+				"message": "Our chain is authoritative",
+				"chain":   bc.Chain,
+			}
+		}
+
 		RespondWithJSON(w, http.StatusOK, response)
 	}
 }

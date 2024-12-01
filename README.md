@@ -5,10 +5,12 @@
 1. [Introduction](#introduction)
 2. [Features](#features)
 3. [API Endpoints](#api-endpoints)
-   1. [API Interaction Flow](#api-interaction-flow)
-   2. [Create a New Transaction](#1-create-a-new-transaction)
-   3. [Mine a New Block](#2-mine-a-new-block)
-   4. [Retrieve the Entire Blockchain](#3-retrieve-the-entire-blockchain)
+   1. [API Interaction Flow](#1-api-interaction-flow)
+   2. [Create a New Transaction](#2-create-a-new-transaction)
+   3. [Mine a New Block](#3-mine-a-new-block)
+   4. [Retrieve the Entire Blockchain](#4-retrieve-the-entire-blockchain)
+   5. [Add Nodes to the network](#5-add-nodes)
+   6. [Resolve Conflicts](#6-resolve-conflicts)
 4. [Blockchain Structure](#blockchain-structure)
 5. [Blockchain squence diagram](#blockchain-squence-diagram)
 6. [How to Run the Project](#how-to-run-the-project)
@@ -32,6 +34,8 @@ This is a side project intended to give insight into the workings of blockchain 
 - **Create Transactions**: Add new transactions that will be stored in the blockchain.
 - **Mine Blocks**: Mine new blocks that include the transactions, proving the validity of the new block.
 - **View Blockchain**: Retrieve the entire chain to visualize the blocks and transactions.
+- **Add New Node**: This feature allows a new node (i.e., a server or participant) to join the blockchain network. By registering a new node, it can participate in mining, transactions, and chain validation.
+- **Validate Chain (Resolve Conflicts)**: This feature allows a node to validate its blockchain and resolve any conflicts that may exist between chains, typically when there are competing blocks from different nodes. The node will replace its chain with the longest, valid chain available.
 
 ## API Endpoints
 
@@ -149,6 +153,68 @@ sequenceDiagram
     }
     ```
 
+### 5. Add Nodes
+
+- **Endpoint**: `POST /nodes/register`
+- **Description**: Adds new nodes to the blockchain network.
+- **Request Body**:
+    ```json
+    {
+    "nodes": [        
+    "http://localhost:8081",
+    "http://localhost:8082"
+    ]
+    }
+  ```
+
+- **Response**:
+    ```json
+    {"message":"New nodes have been added","total_nodes":{"http://localhost:8080":true,"http://localhost:8081":true}}
+    ```
+
+### 6. Resolve Conflicts
+
+- **Endpoint**: `GET /nodes/resolve`
+- **Description**: Resolves conflicts in the blockchain network by replacing the chain with the longest valid one.
+- **Response**:
+```json
+{
+  "chain": [
+    {
+      "index": 1,
+      "timestamp": 1733080046,
+      "transactions": [],
+      "previous_hash": "0000",
+      "proof": 100,
+      "hash": "501659aea6b48c6c37952020c0ac3e80c4a4616b3cbba8ae1e54e51704c0ed89"
+    },
+    {
+      "index": 2,
+      "timestamp": 1733080107,
+      "transactions": [
+        {
+          "sender": "pablo",
+          "recipient": "raul",
+          "amount": 100
+        }
+      ],
+      "previous_hash": "501659aea6b48c6c37952020c0ac3e80c4a4616b3cbba8ae1e54e51704c0ed89",
+      "proof": 137443,
+      "hash": "729444188c83c2ba1e2e7c3d2694ab29fab99c0bdaaa3fca7b42d55298f45886"
+    },
+    {
+      "index": 3,
+      "timestamp": 1733080112,
+      "transactions": [],
+      "previous_hash": "729444188c83c2ba1e2e7c3d2694ab29fab99c0bdaaa3fca7b42d55298f45886",
+      "proof": 13245,
+      "hash": "f1299176939ab505db1b630564bb738ceaf1e41ad878619b6666642d925c389b"
+    }
+  ],
+  "message": "Our chain is authoritative"
+}
+```
+
 ## Blockchain Structure
 
 The blockchain is a list of blocks, each containing the following:
@@ -164,7 +230,7 @@ The folowing "class" diagram provides an overview of the main entities and their
 - **Blockchain**:
   - Contains a list of `Block` objects representing the chain.
   - Manages `CurrentTransactions`, a list of `Transaction` objects for the current block.
-  - Key methods include `NewBlock`, `NewTransaction`, `Hash`, `LastBlock`, `ProofOfWork`, and `ValidProof`.
+  - Key methods include `NewBlock`, `NewTransaction`, `Hash`, `LastBlock`, `ProofOfWork`, `ValidProof`, `ValidChain`, `RegisterNode` and `ResolveConflicts`.
 
 - **Block**:
   - Represents a block in the blockchain with attributes like `Index`, `Timestamp`, `Transactions`, `PreviousHash`, `Proof`, and `Hash`.
@@ -184,6 +250,9 @@ classDiagram
         +LastBlock() *Block
         +ProofOfWork(lastProof int, previousHash string) int
         +ValidProof(lastProof int, proof int, previousHash string) bool
+        +ValidChain(chain []Block) bool
+        +RegisterNode(address string)
+        +ResolveConflicts() bool
     }
 
     class Block {
@@ -226,7 +295,6 @@ sequenceDiagram
   - The `Blockchain` creates a `Transaction` and adds it to the `CurrentTransactions` list.
   - A response is sent to confirm the transaction was added.
 
-
  **2. Mine a New Block (`GET /mine`)**:
 
 ```mermaid
@@ -263,6 +331,46 @@ sequenceDiagram
   - The client requests the entire blockchain.
   - The `Blockchain` returns the full chain, including all blocks, in the response. 
 
+
+**4. Add Node (`POST /nodes/register`)**:
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Blockchain
+    Client->>Blockchain: POST /nodes/register with node addresses
+    Blockchain-->>Client: Response (New nodes added, total nodes list)
+```
+
+- The Client sends a `POST` request to the Blockchain to register new nodes, including a list of node addresses in the request body
+- Adds the new nodes to the network, and responds with a message confirming the addition of the nodes, along with the updated list of all nodes in the network.
+
+**5. Resolve Conflicts (`GET /nodes/resolve`)**:
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Blockchain
+    participant Node1
+    participant Node2
+    participant Node3
+
+    Client->>Blockchain: GET /nodes/resolve
+    Blockchain->>Node1: GET /chain
+    Node1-->>Blockchain: Response (Chain with length, blocks)
+    Blockchain->>Node2: GET /chain
+    Node2-->>Blockchain: Response (Chain with length, blocks)
+    Blockchain->>Node3: GET /chain
+    Node3-->>Blockchain: Response (Chain with length, blocks)
+    Blockchain-->>Client: Response (New chain or current chain)
+```
+
+- Client makes a `GET /nodes/resolve` request to the Blockchain to resolve conflicts and find the most valid and longest chain
+- The Blockchain sends `GET /chain` requests to each node in its network (Node1, Node2, Node3, etc.).
+- Each Node responds with its chain (including the chain length and the blocks).
+- Blockchain checks the received chains:
+  - If a chain is longer than the current one and valid, it replaces its own chain.
+  - If no valid longer chain is found, the current chain remains.
+- After evaluating all nodes, Blockchain sends a response to the Client indicating whether it has replaced its chain with a new one or if the current chain remains authoritative.
 
 ## How to Run the Project
 

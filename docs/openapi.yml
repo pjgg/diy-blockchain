@@ -154,3 +154,115 @@ paths:
                     type: integer
                     description: The total number of blocks in the blockchain
                     example: 3
+  /nodes/register:
+    post:
+      summary: Register new nodes
+      description: Adds new nodes to the blockchain network.
+      requestBody:
+        description: List of node addresses to register
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nodes:
+                  type: array
+                  items:
+                    type: string
+                  description: List of node addresses
+                  example:
+                    - "http://localhost:5001"
+                    - "http://localhost:5002"
+              required:
+                - nodes
+      responses:
+        "201":
+          description: Nodes registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "New nodes have been added"
+                  total_nodes:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      - "http://localhost:5001"
+                      - "http://localhost:5002"
+        "400":
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid request payload. Please supply a valid list of nodes."
+  /nodes/resolve:
+    get:
+      summary: Resolve conflicts
+      description: Resolves conflicts in the blockchain network by replacing the chain with the longest valid one.
+      responses:
+        "200":
+          description: Conflict resolution result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Our chain was replaced"
+                  new_chain:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        index:
+                          type: integer
+                          example: 1
+                        timestamp:
+                          type: string
+                          format: date-time
+                          example: "2024-01-01T12:00:00Z"
+                        transactions:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              sender:
+                                type: string
+                                example: "address_1"
+                              recipient:
+                                type: string
+                                example: "address_2"
+                              amount:
+                                type: integer
+                                example: 100
+                        previous_hash:
+                          type: string
+                          example: "abcd1234"
+                        hash:
+                          type: string
+                          example: "efgh5678"
+                  chain:
+                    type: array
+                    items:
+                      type: object
+                      description: Only present if the chain is authoritative
+        "400":
+          description: Conflict resolution error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Error resolving conflicts"
