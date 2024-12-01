@@ -124,8 +124,9 @@ func TestMineBlock(t *testing.T) {
 		t.Errorf("Expected block data in response, got %v", result["block"])
 	}
 
-	if blockData["index"] != float64(1) {
-		t.Errorf("Expected block index 1, got %v", blockData["index"])
+	// The index of the first block should be 2 (since genesis block has index 1)
+	if blockData["index"] != float64(2) {
+		t.Errorf("Expected block index 2, got %v", blockData["index"])
 	}
 }
 
@@ -193,5 +194,58 @@ func startServer(ch chan<- bool) {
 		}
 
 		time.Sleep(2 * time.Second)
+	}
+}
+
+func TestRegisterNodes(t *testing.T) {
+	nodes := []string{
+		"http://localhost:5001",
+		"http://localhost:5002",
+	}
+
+	payload := map[string]interface{}{
+		"nodes": nodes,
+	}
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("Failed to marshal payload: %v", err)
+	}
+
+	// Send the request to register the nodes
+	url := fmt.Sprintf("http://localhost:%d/nodes/register", serverPort)
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(payloadBytes))
+	if err != nil {
+		t.Fatalf("Failed to send request to /nodes/register: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		t.Errorf("Expected status code %d, got %d", http.StatusCreated, resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Failed to read response body: %v", err)
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(body, &result); err != nil {
+		t.Fatalf("Failed to parse response JSON: %v", err)
+	}
+
+	if result["message"] != "New nodes have been added" {
+		t.Errorf("Expected message 'New nodes have been added', got %v", result["message"])
+	}
+
+	// Check the 'total_nodes' field and verify it is a map
+	if totalNodes, ok := result["total_nodes"].(map[string]interface{}); ok {
+		// Verify that the nodes from the payload are present in the total_nodes map
+		for _, node := range nodes {
+			if _, exists := totalNodes[node]; !exists {
+				t.Errorf("Expected node %s to be registered, but it wasn't found", node)
+			}
+		}
+	} else {
+		t.Errorf("Expected 'total_nodes' to be a map[string]bool, got %v", result["total_nodes"])
 	}
 }

@@ -14,7 +14,8 @@ func Start(ctx context.Context, configuration *configuration.Config) {
 	http.HandleFunc("/transactions/new", BlockAndChainHandlerInstance().NewTransaction())
 	http.HandleFunc("/mine", BlockAndChainHandlerInstance().MineBlock())
 	http.HandleFunc("/chain", BlockAndChainHandlerInstance().GetChain())
-
+	http.HandleFunc("/nodes/register", BlockAndChainHandlerInstance().RegisterNodes())
+	http.HandleFunc("/nodes/resolve", BlockAndChainHandlerInstance().ResolveConflicts())
 	logger.Infof("Server started on port %s", configuration.HttpPort)
 	logger.Fatal("Server didn't start.", zap.Error(http.ListenAndServe(":"+configuration.HttpPort, nil)))
 }
